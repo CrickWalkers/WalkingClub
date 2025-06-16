@@ -1,5 +1,3 @@
-// script.js
-
 // --- Supabase Initialization ---
 const supabaseUrl = 'https://ukkyukgbcrnxkzszlkwy.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVra3l1a2diY3JueGt6c3psa3d5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMDEwMzEsImV4cCI6MjA2NTY3NzAzMX0.ExT2ucsBZW7ZslXRfPtlcgY-nSX7RF15KB2iIdvJWvs';
@@ -86,27 +84,34 @@ window.closeModal = function() {
 
 // --- Load planned walks from Supabase ---
 async function loadPlannedWalks() {
-    let { data, error } = await supabase
+    const { data, error } = await supabase
         .from('planned_walks')
         .select('*')
         .order('date', { ascending: true });
 
     if (error) {
-        console.error('Error loading walks:', error);
+        console.error('🔴 Error loading walks from Supabase:', error);
         return;
     }
+
+    console.log('✅ Loaded walks:', data);
     plannedWalks = data || [];
     displayPlannedWalks();
 }
 
 // --- Save walk details to Supabase ---
-window.saveWalkDetails = async function() {
-    const walkType = document.getElementById('walkType').value;
-    const startTime = document.getElementById('startTime').value;
-    const walkInfo = document.getElementById('walkInfo').value;
+window.saveWalkDetails = async function () {
+    const walkType = document.getElementById('walkType').value.trim();
+    const startTime = document.getElementById('startTime').value.trim();
+    const walkInfo = document.getElementById('walkInfo').value.trim();
 
     if (!selectedDate) {
-        alert("Select a date first");
+        alert("❗ Select a date first");
+        return;
+    }
+
+    if (!startTime || !walkInfo) {
+        alert("❗ Please fill out all fields.");
         return;
     }
 
@@ -117,16 +122,19 @@ window.saveWalkDetails = async function() {
         info: walkInfo
     };
 
+    console.log("📤 Attempting to insert:", newWalk);
+
     const { data, error } = await supabase
         .from('planned_walks')
         .insert([newWalk]);
 
     if (error) {
-        console.error('Error saving walk:', error);
-        alert('Failed to save walk');
+        console.error('🔴 Supabase insert failed:', error);
+        alert('⚠️ Failed to save walk. Check console for details.');
         return;
     }
 
+    console.log('✅ Walk inserted:', data);
     plannedWalks.push(data[0]);
     displayPlannedWalks();
     closeModal();
@@ -156,7 +164,7 @@ window.deleteWalk = async function(id) {
         .eq('id', id);
 
     if (error) {
-        console.error('Error deleting walk:', error);
+        console.error('🔴 Error deleting walk:', error);
         alert('Failed to delete walk');
         return;
     }
