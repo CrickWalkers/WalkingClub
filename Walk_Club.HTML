@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-scale, initial-scale=1.0">
+    <title>Walking Club</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 2em;
+        }
+        .container {
+            margin: 20px auto;
+            max-width: 900px;
+            background: #1f1f1f;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+        .calendar, .planned-walks {
+            margin-top: 30px;
+        }
+        select, button {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #444;
+            cursor: pointer;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: white;
+        }
+        /* Map container style */
+        #map {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+            z-index: 0; /* Ensure map stays behind the modal */
+        }
+
+        /* Modal style */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000; /* Ensure modal is on top */
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            margin: 100px auto;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+        }
+        .modal input, .modal select, .modal textarea {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            background-color: #2d2d2d;
+            border: 1px solid #555;
+            border-radius: 6px;
+            color: white;
+        }
+        .close {
+            color: white;
+            float: right;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Planned Walks Section */
+        .planned-walks h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .planned-walks ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .planned-walks li {
+            background-color: #2d2d2d;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        .planned-walks li span {
+            font-weight: bold;
+        }
+        .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff5555;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        .delete-btn:hover {
+            background-color: #ff4444;
+        }
+
+        /* Calendar Style */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            width: 14%;
+            height: 60px;
+            text-align: center;
+            cursor: pointer;
+            padding: 5px;
+            border: 1px solid #555;
+            transition: background-color 0.2s;
+        }
+        td:hover {
+            background-color: #444;
+        }
+        th {
+            padding: 10px;
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <header>Walking Club</header>
+    <div class="container">
+        <div id="map"></div>
+
+        <!-- Calendar Section -->
+        <div class="calendar">
+            <h2>Physical Calendar</h2>
+            <label for="year">Select Year:</label>
+            <select id="year"></select>
+            <label for="month">Select Month:</label>
+            <select id="month">
+                <option value="0">January</option>
+                <option value="1">February</option>
+                <option value="2">March</option>
+                <option value="3">April</option>
+                <option value="4">May</option>
+                <option value="5">June</option>
+                <option value="6">July</option>
+                <option value="7">August</option>
+                <option value="8">September</option>
+                <option value="9">October</option>
+                <option value="10">November</option>
+                <option value="11">December</option>
+            </select>
+            <table id="calendar"></table>
+        </div>
+
+        <!-- Planned Walks Section -->
+        <div class="planned-walks">
+            <h2>Planned Walks</h2>
+            <ul id="plannedWalksList">
+                <!-- Walks will appear here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal for Adding Walk -->
+    <div id="walkModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Add Walk Details for <span id="modalDate">[Date]</span></h2>
+            <label for="walkType">Select Walk Type:</label>
+            <select id="walkType">
+                <option value="local">Local</option>
+                <option value="semi-local">Semi-Local</option>
+                <option value="expedition">Expedition</option>
+            </select>
+
+            <label for="startTime">Start Time:</label>
+            <input type="time" id="startTime">
+
+            <label for="walkInfo">Additional Info:</label>
+            <textarea id="walkInfo" placeholder="Where are we going?"></textarea>
+
+            <button onclick="saveWalkDetails()">Save Walk</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([51.8523, -3.1447], 13); // Coordinates of 51°51'08.2"N 3°08'40.9"W
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add a marker with the specified coordinates and label
+        var marker = L.marker([51.8523, -3.1447]).addTo(map);
+        marker.bindPopup('<b>Walking Club Start</b><br>Meet up here!').openPopup();
+
+        // Calendar related functionality
+        const yearSelect = document.getElementById('year');
+        const monthSelect = document.getElementById('month');
+        const calendar = document.getElementById('calendar');
+        const modalDate = document.getElementById('modalDate');
+
+        let selectedDate = null;
+
+        function isLeapYear(year) {
+            return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        }
+
+        function populateYears() {
+            for (let year = 2025; year <= 2050; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+            yearSelect.value = new Date().getFullYear();
+        }
+
+        function generateCalendar() {
+            const year = parseInt(yearSelect.value);
+            const month = parseInt(monthSelect.value);
+            const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            const firstDay = new Date(year, month, 1).getDay();
+
+            let table = '<tr>';
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            days.forEach(day => {
+                table += `<th>${day}</th>`;
+            });
+            table += '</tr><tr>';
+
+            for (let i = 0; i < firstDay; i++) {
+                table += '<td></td>';
+            }
+
+            for (let day = 1; day <= daysInMonth[month]; day++) {
+                if ((day + firstDay - 1) % 7 === 0 && day !== 1) {
+                    table += '</tr><tr>';
+                }
+                table += `<td onclick="openModal(${day})">${day}</td>`;
+            }
+
+            table += '</tr>';
+            calendar.innerHTML = table;
+        }
+
+        function openModal(day) {
+            selectedDate = `${day}-${parseInt(monthSelect.value) + 1}-${yearSelect.value}`;
+            modalDate.textContent = selectedDate;
+            document.getElementById('walkModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('walkModal').style.display = 'none';
+        }
+
+        // Load planned walks from localStorage
+        function loadPlannedWalks() {
+            const savedWalks = JSON.parse(localStorage.getItem('plannedWalks'));
+            if (savedWalks) {
+                plannedWalks.push(...savedWalks);
+                displayPlannedWalks();
+            }
+        }
+
+        // Save Walk Details
+        const plannedWalks = [];
+
+        function saveWalkDetails() {
+            const walkType = document.getElementById('walkType').value;
+            const startTime = document.getElementById('startTime').value;
+            const walkInfo = document.getElementById('walkInfo').value;
+
+            const walkDetails = {
+                date: selectedDate,
+                type: walkType,
+                time: startTime,
+                info: walkInfo
+            };
+
+            plannedWalks.push(walkDetails);
+            localStorage.setItem('plannedWalks', JSON.stringify(plannedWalks)); // Save to localStorage
+            displayPlannedWalks();
+            closeModal();
+        }
+
+        // Display Planned Walks
+        function displayPlannedWalks() {
+            const plannedWalksList = document.getElementById('plannedWalksList');
+            plannedWalksList.innerHTML = '';
+            plannedWalks.forEach((walk, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${walk.date}</span><br>Type: ${walk.type}<br>Time: ${walk.time}<br>Info: ${walk.info}<button class="delete-btn" onclick="deleteWalk(${index})">Delete</button>`;
+                plannedWalksList.appendChild(li);
+            });
+        }
+
+        // Delete Walk
+        function deleteWalk(index) {
+            plannedWalks.splice(index, 1);
+            localStorage.setItem('plannedWalks', JSON.stringify(plannedWalks)); // Save to localStorage after deletion
+            displayPlannedWalks();
+        }
+
+        yearSelect.addEventListener('change', generateCalendar);
+        monthSelect.addEventListener('change', generateCalendar);
+
+        populateYears();
+        generateCalendar();
+        loadPlannedWalks(); // Load saved walks from localStorage
+    </script>
+</body>
+</html>
